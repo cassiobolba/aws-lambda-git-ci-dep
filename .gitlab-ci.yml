@@ -1,0 +1,69 @@
+image: python:3.8
+
+stages:
+  - build
+  - build_dev
+  - deploy
+  - deploy_dev
+  - clean_dev
+
+.installs: &installs
+  before_script:
+    - apt-get update
+    - apt-get install -y python3-pip
+    - pip3 install awscli --upgrade
+    - pip3 install aws-sam-cli --upgrade
+
+build:
+  stage: build
+  <<: *installs
+  script:
+    - sam build
+  artifacts:
+    paths:
+      - .aws-sam
+  only:
+    - master
+
+build_dev:
+  stage: build_dev
+  <<: *installs
+  script:
+    - sam build
+  artifacts:
+    paths:
+      - .aws-sam
+  only:
+    - branches
+    - merge_requests
+
+deploy:
+  stage: deploy
+  <<: *installs
+  script:
+    - sam package --output-template-file packaged.yaml --s3-bucket lambda-deploy-gitlab --region us-east-1
+    - sam deploy --template-file packaged.yaml --stack-name lambda-deploy-gitlab  --s3-bucket lambda-deploy-gitlab --capabilities CAPABILITY_IAM --region us-east-1  --no-fail-on-empty-changeset
+  allow_failure: true
+  only:
+    - master
+
+deploy_dev:
+  stage: deploy_dev
+  <<: *installs
+  script:
+    - sam package --output-template-file packaged.yaml --s3-bucket lambda-deploy-gitlab-dev --region us-east-1
+    - sam deploy --template-file packaged.yaml --stack-name lambda-deploy-gitlab-dev  --s3-bucket lambda-deploy-gitlab-dev --capabilities CAPABILITY_IAM --region us-east-1  --no-fail-on-empty-changeset
+  allow_failure: true
+  only:
+    - branches
+    - merge_requests
+
+clean_dev:
+  stage: clean_dev
+  <<: *installs
+  script:
+    - sam delete --stack-name lambda-deploy-gitlab-dev --no-prompts --region us-east-1
+  when: manual
+  only:
+    - branches
+    - merge_requests
