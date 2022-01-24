@@ -1,4 +1,4 @@
-image: python:3.8
+image: python:3.8-slim
 
 stages:
   - build
@@ -14,6 +14,23 @@ stages:
     - pip3 install awscli --upgrade
     - pip3 install aws-sam-cli --upgrade
 
+.dev_only: &dev_only
+  except:
+    - main
+
+variables:
+  PIP_CACHE_DIR: $CI_PROJECT_DIR/.cache/pip
+  BUCKET: lambda-deploy-gitlab
+
+cache:
+  key:
+    files:
+      - .gitlab-ci.yml
+      - .template.yaml
+    prefix: ${CI_JOB_NAME}
+  paths:
+    - .cache/pip
+
 build:
   stage: build
   <<: *installs
@@ -23,7 +40,7 @@ build:
     paths:
       - .aws-sam
   only:
-    - master
+    - main
 
 build_dev:
   stage: build_dev
@@ -33,30 +50,26 @@ build_dev:
   artifacts:
     paths:
       - .aws-sam
-  only:
-    - branches
-    - merge_requests
+  <<: *dev_only
 
 deploy:
   stage: deploy
   <<: *installs
   script:
-    - sam package --output-template-file packaged.yaml --s3-bucket lambda-deploy-gitlab --region us-east-1
-    - sam deploy --template-file packaged.yaml --stack-name lambda-deploy-gitlab  --s3-bucket lambda-deploy-gitlab --capabilities CAPABILITY_IAM --region us-east-1  --no-fail-on-empty-changeset
+    - sam package --output-template-file packaged.yaml --s3-bucket $BUCKET --region us-east-1
+    - sam deploy --template-file packaged.yaml --stack-name $CI_PROJECT_NAME --s3-bucket $BUCKET --capabilities CAPABILITY_IAM --region us-east-1  --no-fail-on-empty-changeset
   allow_failure: true
   only:
-    - master
+    - main
 
 deploy_dev:
   stage: deploy_dev
   <<: *installs
   script:
-    - sam package --output-template-file packaged.yaml --s3-bucket lambda-deploy-gitlab-dev --region us-east-1
-    - sam deploy --template-file packaged.yaml --stack-name lambda-deploy-gitlab-dev  --s3-bucket lambda-deploy-gitlab-dev --capabilities CAPABILITY_IAM --region us-east-1  --no-fail-on-empty-changeset
+    - sam package --output-template-file packaged.yaml --s3-bucket $BUCKET-dev --region us-east-1
+    - sam deploy --template-file packaged.yaml --stack-name $CI_PROJECT_NAME-$CI_COMMIT_REF_SLUG  --s3-bucket $BUCKET-dev --capabilities CAPABILITY_IAM --region us-east-1  --no-fail-on-empty-changeset
   allow_failure: true
-  only:
-    - branches
-    - merge_requests
+  <<: *dev_only
 
 clean_dev:
   stage: clean_dev
@@ -64,6 +77,4 @@ clean_dev:
   script:
     - sam delete --stack-name lambda-deploy-gitlab-dev --no-prompts --region us-east-1
   when: manual
-  only:
-    - branches
-    - merge_requests
+  <<: *dev_only
