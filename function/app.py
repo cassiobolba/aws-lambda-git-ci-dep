@@ -2,7 +2,7 @@ import requests
 
 def lambda_handler(event, context, city="Porto Alegre"):
 
-    api_key = "868a26a88dcad371f4205a319f26be8c"
+    api_key = ""
 
     url = "http://api.openweathermap.org/data/2.5/weather?q="+ city +"&appid="+ api_key
 
