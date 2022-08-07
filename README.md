@@ -16,3 +16,4 @@ Project to deploy an AWS Lambda Function and AWS API Gateway using Git Lab CI/CD
 6 - Git CI uses standard Git Runner and AWS CLI with AWS SAM CLI to make the deployment   
 7 - If the deployment is made from a branch, it deploys to "dev environment", if from master deploy to production   
 8 - Git Lab is also responsible for code versioning control   
+
