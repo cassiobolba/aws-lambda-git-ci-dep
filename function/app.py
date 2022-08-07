@@ -7,7 +7,7 @@ def lambda_handler(event, context):
     except:
         city = "Porto Alegre"
     
-    api_key = "868a26a88dcad371f4205a319f26be8c-io"
+    api_key = "YOUR API KEY"
 
     url = "http://api.openweathermap.org/data/2.5/weather?q="+ str(city) +"&appid="+ api_key
 
